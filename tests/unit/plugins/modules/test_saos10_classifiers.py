@@ -11,7 +11,6 @@ from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
-import pytest
 
 from ansible_collections.ciena.saos10.plugins.modules import saos10_classifiers
 from ansible_collections.ciena.saos10.tests.unit.plugins.modules.saos10_module import (
@@ -43,18 +42,6 @@ FACTS = [
     }
 ]
 
-# Behaviour that the current code does not deliver yet (see reason); flipped
-# to a hard pass once the facts xpath and the merged/deleted comparisons are fixed.
-KNOWN_GAP = pytest.mark.xfail(
-    strict=True,
-    reason="facts xpath //classifiers/classifiers never matches a device reply, so have is always empty",
-)
-
-CHECK_MODE_GAP = pytest.mark.xfail(
-    strict=True,
-    reason="supports_check_mode=True but edit_config is still called in check mode",
-)
-
 
 class TestSaos10Classifiers(TestSaos10Module):
     module = saos10_classifiers
@@ -65,7 +52,6 @@ class TestSaos10Classifiers(TestSaos10Module):
         self.execute_module({"config": WANT, "state": "merged"})
         self.assert_edit_config_xml("classifiers_merged.xml")
 
-    @KNOWN_GAP
     def test_merged_reports_changed_before_after(self):
         self.queue_replies("classifiers_empty.xml", "classifiers_running.xml")
         result = self.execute_module({"config": WANT, "state": "merged"})
@@ -73,13 +59,11 @@ class TestSaos10Classifiers(TestSaos10Module):
         assert result["before"] == []
         assert result["after"] == FACTS
 
-    @CHECK_MODE_GAP
     def test_merged_check_mode_never_edits(self):
         self.queue_replies("classifiers_empty.xml", "classifiers_empty.xml")
         self.execute_module({"config": WANT, "state": "merged", "_ansible_check_mode": True})
         self.assert_no_edit_config()
 
-    @KNOWN_GAP
     def test_merged_idempotent(self):
         self.queue_replies("classifiers_running.xml", "classifiers_running.xml")
         result = self.execute_module({"config": WANT, "state": "merged"})
@@ -92,7 +76,6 @@ class TestSaos10Classifiers(TestSaos10Module):
         self.execute_module({"config": [{"name": "foo-100"}], "state": "deleted"})
         self.assert_edit_config_xml("classifiers_deleted.xml")
 
-    @KNOWN_GAP
     def test_deleted_reports_changed_before_after(self):
         self.queue_replies("classifiers_running.xml", "classifiers_empty.xml")
         result = self.execute_module({"config": [{"name": "foo-100"}], "state": "deleted"})
@@ -100,7 +83,6 @@ class TestSaos10Classifiers(TestSaos10Module):
         assert result["before"] == FACTS
         assert result["after"] == []
 
-    @CHECK_MODE_GAP
     def test_deleted_check_mode_never_edits(self):
         self.queue_replies("classifiers_running.xml", "classifiers_running.xml")
         self.execute_module(
@@ -112,7 +94,6 @@ class TestSaos10Classifiers(TestSaos10Module):
         )
         self.assert_no_edit_config()
 
-    @KNOWN_GAP
     def test_deleted_idempotent(self):
         self.queue_replies("classifiers_empty.xml", "classifiers_empty.xml")
         result = self.execute_module({"config": [{"name": "foo-100"}], "state": "deleted"})

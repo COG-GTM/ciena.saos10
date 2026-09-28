@@ -10,24 +10,28 @@ is compared to the provided configuration (as dict) and the command set
 necessary to bring the current configuration to it's desired end-state is
 created
 """
-from __future__ import absolute_import, division, print_function
 
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
 try:
-    from lxml.etree import tostring as xml_to_string, Element
+    from lxml.etree import tostring as xml_to_string, Element, fromstring
 
     HAS_LXML = True
 except ImportError:
     from xml.etree.ElementTree import Element
-    from xml.etree.ElementTree import tostring as xml_to_string
+    from xml.etree.ElementTree import tostring as xml_to_string, fromstring
 
     HAS_LXML = False
 
 
+from ansible.module_utils._text import to_bytes
 from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.cfg.base import (
     ConfigBase,
+)
+from ansible_collections.ansible.netcommon.plugins.module_utils.network.common.utils import (
+    remove_empties,
 )
 from ansible_collections.ciena.saos10.plugins.module_utils.network.saos10.facts.facts import (
     Facts,
@@ -54,13 +58,15 @@ class Classifiers(ConfigBase):
     def __init__(self, module):
         super(Classifiers, self).__init__(module)
 
-    def get_facts(self):
+    def get_facts(self, data=None):
         """Get the 'facts' (the current configuration)
 
-        :rtype: A dictionary
-        :returns: The current configuration as a dictionary
+        :param data: previously collected configuration (lxml element);
+                     when given, no device round-trip is made
+        :rtype: A list
+        :returns: The current configuration as a list of dictionaries
         """
-        facts, _warnings = Facts(self._module).get_facts(self.gather_subset, self.gather_network_resources)
+        facts, _warnings = Facts(self._module).get_facts(self.gather_subset, self.gather_network_resources, data)
         result = facts["ansible_network_resources"].get(RESOURCE)
         if not result:
             return []
@@ -73,32 +79,43 @@ class Classifiers(ConfigBase):
         :returns: The result from module execution
         """
         result = {"changed": False}
+
+        if self.state == "parsed":
+            running_config = self._module.params["running_config"]
+            data = fromstring(to_bytes(running_config, errors="surrogate_then_replace"))
+            result["parsed"] = self.get_facts(data=data)
+            return result
+
+        if self.state == "rendered":
+            config_dict = self.set_config([])
+            result["rendered"] = self._create_xml_config_generic(config_dict) if config_dict else ""
+            return result
+
         have = self.get_facts()
+
+        if self.state == "gathered":
+            result["gathered"] = have
+            return result
+
         config_dict = self.set_config(have)
 
         if config_dict:
             config_xml = self._create_xml_config_generic(config_dict)
-            config = '<nc:config xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">' f"{config_xml}" "</nc:config>"
-            try:
-                self._module._connection.edit_config(config=config, target="running")
-            except Exception as e:
-                return {"failed": True, "msg": str(e)}
-
-            result["changed"] = True
             result["xml"] = config_xml
+            result["changed"] = True
+            if not self._module.check_mode:
+                config = '<nc:config xmlns:nc="urn:ietf:params:xml:ns:netconf:base:1.0">' f"{config_xml}" "</nc:config>"
+                try:
+                    self._module._connection.edit_config(config=config, target="running")
+                except Exception as e:
+                    return {"failed": True, "msg": str(e)}
 
-        changed_facts = self.get_facts()
-
-        result["changed"] = config_is_diff(have, changed_facts)
+                changed_facts = self.get_facts()
+                result["changed"] = config_is_diff(have, changed_facts)
+                if result["changed"]:
+                    result["after"] = changed_facts
 
         result["before"] = have
-        if self.state in self.ACTION_STATES:
-            if result["changed"]:
-                result["after"] = changed_facts
-
-        elif self.state == "gathered":
-            result["gathered"] = have
-
         return result
 
     def set_config(self, have):
@@ -113,9 +130,10 @@ class Classifiers(ConfigBase):
         state = self._module.params["state"]
         state_methods = {
             "merged": self._state_merged,
+            "rendered": self._state_merged,
             "deleted": self._state_deleted,
         }
-        config_dict = state_methods[state](want, have) if state in self.ACTION_STATES else {}
+        config_dict = state_methods[state](want, have) if state in state_methods else {}
         return config_dict
 
     def _populate_xml_subtree(self, parent: Element, data: dict):
@@ -184,7 +202,7 @@ class Classifiers(ConfigBase):
     def _state_merged_list(self, want, have) -> list:
         response = []
         for w_item in want:
-            if w_item in have:
+            if remove_empties(w_item) in have:
                 continue
             response.append(w_item)
         return response
@@ -193,6 +211,9 @@ class Classifiers(ConfigBase):
         response = []
         if not want:
             want = have
+        have_names = [config[XML_ITEMS_KEY] for config in have]
         for config in want:
-            response.append({"name": config["name"], "operation": "delete"})
+            if config[XML_ITEMS_KEY] not in have_names:
+                continue
+            response.append({XML_ITEMS_KEY: config[XML_ITEMS_KEY], "operation": "delete"})
         return response

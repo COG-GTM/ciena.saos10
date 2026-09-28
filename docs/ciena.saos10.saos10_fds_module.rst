@@ -466,6 +466,22 @@ Parameters
             <tr>
                 <td colspan="4">
                     <div class="ansibleOptionAnchor" id="parameter-"></div>
+                    <b>running_config</b>
+                    <a class="ansibleOptionLink" href="#parameter-" title="Permalink to this option"></a>
+                    <div style="font-size: small">
+                        <span style="color: purple">string</span>
+                    </div>
+                </td>
+                <td>
+                </td>
+                <td>
+                        <div>This option is used only with state <em>parsed</em>.</div>
+                        <div>The value of this option should be the NETCONF XML for <code>&lt;fds&gt;</code> as returned by a <code>&lt;get&gt;</code> or <code>&lt;get-config&gt;</code> on the device (or the <code>ansible_net_config</code> fact). The module parses it into the same structure as <code>config</code> and returns it in the <em>parsed</em> key without connecting to the device.</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="4">
+                    <div class="ansibleOptionAnchor" id="parameter-"></div>
                     <b>state</b>
                     <a class="ansibleOptionLink" href="#parameter-" title="Permalink to this option"></a>
                     <div style="font-size: small">
@@ -476,10 +492,17 @@ Parameters
                         <ul style="margin: 0; padding: 0"><b>Choices:</b>
                                     <li><div style="color: blue"><b>merged</b>&nbsp;&larr;</div></li>
                                     <li>deleted</li>
+                                    <li>gathered</li>
+                                    <li>rendered</li>
+                                    <li>parsed</li>
                         </ul>
                 </td>
                 <td>
-                        <div>The state of the configuration</div>
+                        <div>The state of the configuration after module completion.</div>
+                        <div><em>merged</em> and <em>deleted</em> push changes to the device.</div>
+                        <div><em>gathered</em> reads the current fds configuration from the device and returns it in the <em>gathered</em> key without changing anything.</div>
+                        <div><em>rendered</em> converts <code>config</code> into the NETCONF XML that <em>merged</em> would push and returns it in the <em>rendered</em> key without connecting to the device.</div>
+                        <div><em>parsed</em> converts <em>running_config</em> into structured facts and returns them in the <em>parsed</em> key without connecting to the device.</div>
                 </td>
             </tr>
     </table>
@@ -537,6 +560,59 @@ Common return values are documented `here <https://docs.ansible.com/ansible/late
                         <div style="font-size: smaller"><b>Sample:</b></div>
                         <div style="font-size: smaller; color: blue; word-wrap: break-word; word-break: break-all;">The configuration returned will always be in the same format
      of the parameters above.</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="1">
+                    <div class="ansibleOptionAnchor" id="return-"></div>
+                    <b>gathered</b>
+                    <a class="ansibleOptionLink" href="#return-" title="Permalink to this return value"></a>
+                    <div style="font-size: small">
+                      <span style="color: purple">list</span>
+                    </div>
+                </td>
+                <td>when <em>state</em> is <code>gathered</code></td>
+                <td>
+                            <div>Facts about the fds configuration on the device.</div>
+                    <br/>
+                        <div style="font-size: smaller"><b>Sample:</b></div>
+                        <div style="font-size: smaller; color: blue; word-wrap: break-word; word-break: break-all;">The configuration returned will always be in the same format
+     of the parameters above.</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="1">
+                    <div class="ansibleOptionAnchor" id="return-"></div>
+                    <b>parsed</b>
+                    <a class="ansibleOptionLink" href="#return-" title="Permalink to this return value"></a>
+                    <div style="font-size: small">
+                      <span style="color: purple">list</span>
+                    </div>
+                </td>
+                <td>when <em>state</em> is <code>parsed</code></td>
+                <td>
+                            <div>The <em>running_config</em> parsed into the structure of <em>config</em>.</div>
+                    <br/>
+                        <div style="font-size: smaller"><b>Sample:</b></div>
+                        <div style="font-size: smaller; color: blue; word-wrap: break-word; word-break: break-all;">The configuration returned will always be in the same format
+     of the parameters above.</div>
+                </td>
+            </tr>
+            <tr>
+                <td colspan="1">
+                    <div class="ansibleOptionAnchor" id="return-"></div>
+                    <b>rendered</b>
+                    <a class="ansibleOptionLink" href="#return-" title="Permalink to this return value"></a>
+                    <div style="font-size: small">
+                      <span style="color: purple">string</span>
+                    </div>
+                </td>
+                <td>when <em>state</em> is <code>rendered</code></td>
+                <td>
+                            <div>The NETCONF XML that would be pushed for <em>config</em>.</div>
+                    <br/>
+                        <div style="font-size: smaller"><b>Sample:</b></div>
+                        <div style="font-size: smaller; color: blue; word-wrap: break-word; word-break: break-all;">&lt;fds xmlns=&quot;...&quot;&gt;&lt;fd&gt;&lt;name&gt;foo&lt;/name&gt;&lt;/fd&gt;&lt;/fds&gt;</div>
                 </td>
             </tr>
             <tr>
