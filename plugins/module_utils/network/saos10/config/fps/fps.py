@@ -16,7 +16,7 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 try:
-    from lxml.etree import tostring as xml_to_string, Element, fromstring
+    from lxml.etree import tostring as xml_to_string, Element, fromstring, XMLParser
 
     HAS_LXML = True
 except ImportError:
@@ -82,7 +82,8 @@ class Fps(ConfigBase):
 
         if self.state == "parsed":
             running_config = self._module.params["running_config"]
-            data = fromstring(to_bytes(running_config, errors="surrogate_then_replace"))
+            parser = XMLParser(resolve_entities=False, no_network=True) if HAS_LXML else None
+            data = fromstring(to_bytes(running_config, errors="surrogate_then_replace"), parser=parser)
             result["parsed"] = self.get_facts(data=data)
             return result
 

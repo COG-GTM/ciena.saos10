@@ -12,12 +12,16 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
+import re
+
 from ansible_collections.ciena.saos10.plugins.modules import saos10_classifiers
 from ansible_collections.ciena.saos10.tests.unit.plugins.modules.saos10_module import (
     TestSaos10Module,
     load_fixture,
     normalize_xml,
 )
+
+ENTRY = "classifier"
 
 WANT = [
     {
@@ -114,6 +118,21 @@ class TestSaos10Classifiers(TestSaos10Module):
         result = self.execute_module({"running_config": load_fixture("classifiers_running.xml"), "state": "parsed"})
         assert result["changed"] is False
         assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_accepts_bare_resource_root(self):
+        bare = re.search(r"<classifiers\b.*</classifiers>", load_fixture("classifiers_running.xml"), re.S).group(0)
+        result = self.execute_module({"running_config": bare, "state": "parsed"})
+        assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_does_not_resolve_external_entities(self):
+        xml = (
+            '<!DOCTYPE data [<!ENTITY xxe SYSTEM "file:///etc/hostname">]>' '<data><classifiers xmlns="urn:x"><{}><name>&xxe;</name></{}></classifiers></data>'
+        ).format(ENTRY, ENTRY)
+        result = self.execute_module({"running_config": xml, "state": "parsed"}, failed=True)
+        assert "xxe" in result["msg"]
+        assert open("/etc/hostname").read().strip() not in str(result)
         self.assert_offline()
 
     def test_parsed_empty_reply_returns_empty_list(self):

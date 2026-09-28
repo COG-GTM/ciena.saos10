@@ -12,12 +12,16 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 
+import re
+
 from ansible_collections.ciena.saos10.plugins.modules import saos10_fps
 from ansible_collections.ciena.saos10.tests.unit.plugins.modules.saos10_module import (
     TestSaos10Module,
     load_fixture,
     normalize_xml,
 )
+
+ENTRY = "fp"
 
 WANT = [{"name": "foo", "fd_name": "foo", "logical_port": "1", "mtu_size": 1522}]
 
@@ -94,6 +98,21 @@ class TestSaos10Fps(TestSaos10Module):
         result = self.execute_module({"running_config": load_fixture("fps_running.xml"), "state": "parsed"})
         assert result["changed"] is False
         assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_accepts_bare_resource_root(self):
+        bare = re.search(r"<fps\b.*</fps>", load_fixture("fps_running.xml"), re.S).group(0)
+        result = self.execute_module({"running_config": bare, "state": "parsed"})
+        assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_does_not_resolve_external_entities(self):
+        xml = ('<!DOCTYPE data [<!ENTITY xxe SYSTEM "file:///etc/hostname">]>' '<data><fps xmlns="urn:x"><{}><name>&xxe;</name></{}></fps></data>').format(
+            ENTRY, ENTRY
+        )
+        result = self.execute_module({"running_config": xml, "state": "parsed"}, failed=True)
+        assert "xxe" in result["msg"]
+        assert open("/etc/hostname").read().strip() not in str(result)
         self.assert_offline()
 
     def test_parsed_empty_reply_returns_empty_list(self):
