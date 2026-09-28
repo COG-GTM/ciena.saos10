@@ -1,0 +1,1 @@
+<fps xmlns="urn:ciena:params:xml:ns:yang:ciena-pn:ciena-mef-fp"><fp><name>foo</name><fd-name>foo</fd-name><logical-port>1</logical-port><mtu-size>1522</mtu-size></fp></fps>

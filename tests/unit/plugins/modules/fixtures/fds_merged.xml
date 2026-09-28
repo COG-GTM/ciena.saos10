@@ -1,0 +1,1 @@
+<fds xmlns="urn:ciena:params:xml:ns:yang:ciena-pn:ciena-mef-fd"><fd><name>foo</name><mode>vpls</mode><initiate-l2-transform><vlan-stack><tag>1</tag><push-tpid>tpid-8100</push-tpid><push-vid>202</push-vid></vlan-stack></initiate-l2-transform></fd></fds>
