@@ -70,7 +70,7 @@ class FpsFacts(object):
         if not HAS_LXML:
             self._module.fail_json(msg="lxml is not installed.")
 
-        if not data:
+        if data is None:
             config_filter = """
                 <fps xmlns="urn:ciena:params:xml:ns:yang:ciena-pn:ciena-mef-fp">
                 </fps>

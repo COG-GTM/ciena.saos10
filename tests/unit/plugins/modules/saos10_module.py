@@ -86,6 +86,7 @@ class TestSaos10Module(object):
         self.connection = MagicMock(name="resource_connection")
         self.get_replies = []
         self.get_calls = []
+        self.connection_requests = 0
 
         def fake_get(module, *args, **kwargs):
             self.get_calls.append((args, kwargs))
@@ -95,6 +96,7 @@ class TestSaos10Module(object):
             return fromstring(to_bytes(reply))
 
         def fake_resource_connection(module):
+            self.connection_requests += 1
             module._connection = self.connection
             return self.connection
 
@@ -157,3 +159,9 @@ class TestSaos10Module(object):
 
     def assert_no_edit_config(self):
         self.connection.edit_config.assert_not_called()
+
+    def assert_offline(self):
+        """The module never asked for a connection nor issued a NETCONF <get>."""
+        assert self.connection_requests == 0
+        assert self.get_calls == []
+        assert self.connection.method_calls == []

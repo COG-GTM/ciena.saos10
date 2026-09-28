@@ -15,6 +15,8 @@ __metaclass__ = type
 from ansible_collections.ciena.saos10.plugins.modules import saos10_fps
 from ansible_collections.ciena.saos10.tests.unit.plugins.modules.saos10_module import (
     TestSaos10Module,
+    load_fixture,
+    normalize_xml,
 )
 
 WANT = [{"name": "foo", "fd_name": "foo", "logical_port": "1", "mtu_size": 1522}]
@@ -79,3 +81,48 @@ class TestSaos10Fps(TestSaos10Module):
         result = self.execute_module({"config": [{"name": "foo"}], "state": "deleted"})
         assert result["changed"] is False
         self.assert_no_edit_config()
+
+    # --- offline / read-only states -------------------------------------
+
+    def test_rendered_equals_merged_xml(self):
+        result = self.execute_module({"config": WANT, "state": "rendered"})
+        assert result["changed"] is False
+        assert normalize_xml(result["rendered"]) == normalize_xml(load_fixture("fps_merged.xml"))
+        self.assert_offline()
+
+    def test_parsed_returns_facts(self):
+        result = self.execute_module({"running_config": load_fixture("fps_running.xml"), "state": "parsed"})
+        assert result["changed"] is False
+        assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_empty_reply_returns_empty_list(self):
+        result = self.execute_module({"running_config": load_fixture("fps_empty.xml"), "state": "parsed"})
+        assert result["parsed"] == []
+        self.assert_offline()
+
+    def test_gathered_returns_facts_without_editing(self):
+        self.queue_replies("fps_running.xml")
+        result = self.execute_module({"state": "gathered"})
+        assert result["changed"] is False
+        assert result["gathered"] == FACTS
+        assert len(self.get_calls) == 1
+        self.assert_no_edit_config()
+
+    def test_parsed_requires_running_config(self):
+        result = self.execute_module({"state": "parsed"}, failed=True)
+        assert "running_config" in result["msg"]
+        self.assert_offline()
+
+    def test_rendered_requires_config(self):
+        result = self.execute_module({"running_config": load_fixture("fps_running.xml"), "state": "rendered"}, failed=True)
+        assert "config" in result["msg"]
+        self.assert_offline()
+
+    def test_config_and_running_config_are_mutually_exclusive(self):
+        result = self.execute_module(
+            {"config": WANT, "running_config": load_fixture("fps_running.xml"), "state": "rendered"},
+            failed=True,
+        )
+        assert "mutually exclusive" in result["msg"]
+        self.assert_offline()
