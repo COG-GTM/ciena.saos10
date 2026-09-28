@@ -4,4 +4,4 @@ security_fixes:
   - requirements-test.txt - raise the ``black`` floor to ``>=26.3.1`` (PYSEC-2026-2120/2121) and add an explicit ``pytest>=9.0.3`` floor (PYSEC-2026-1845); development-only tooling, not shipped in the collection.
 trivial:
   - requirements-test.txt - correct the ``pytest-ansible`` floor from the non-existent ``24.0.0`` release to ``24.8.0`` (first release compatible with the ``pytest>=9.0.3`` floor).
-  - Add ``security/DEPENDENCY-AUDIT.md`` and a CycloneDX SBOM (``security/sbom.cyclonedx.json``) produced with pip-audit.
+  - Add ``security/DEPENDENCY-AUDIT.md`` and CycloneDX SBOMs (``security/sbom.cyclonedx.json`` for the dev/CI environment, ``security/sbom-runtime.cyclonedx.json`` for the runtime requirements) produced with pip-audit.

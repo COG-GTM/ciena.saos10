@@ -7,17 +7,17 @@
 | Python | 3.12.13 (fresh `venv`) |
 | pip | 26.2.1 |
 | pip-audit | 2.10.1 (PyPI advisory DB + OSV, queried live on the audit date) |
-| SBOM | `security/sbom.cyclonedx.json` — CycloneDX 1.4, 54 components, generated with `pip-audit --format cyclonedx-json` |
+| SBOMs | `security/sbom.cyclonedx.json` — full development/CI environment (`requirements.txt` + `requirements-test.txt`), CycloneDX 1.4, 54 components. `security/sbom-runtime.cyclonedx.json` — runtime only (`requirements.txt`, what `release.yml` installs), CycloneDX 1.4, 15 components. Both generated with `pip-audit --format cyclonedx-json`. Neither describes the Galaxy artifact itself, which contains no Python distributions — only the collection's own code. |
 | Advisory metadata | OSV API (`https://api.osv.dev/v1/vulns/<id>`) for aliases and CVSS vectors; severities below are the CVSS 3.1 base score computed from those vectors |
 
 ## 1. Scope and inventory
 
-Files that define the dependency surface:
+Files that define the dependency surface, **as found on `master` @ `dc2ac46` before this PR** (the floors changed by this PR are listed in §3):
 
 | File | Content | Notes |
 |---|---|---|
 | `requirements.txt` | `ansible-core>=2.16`, `paramiko`, `lxml`, `ncclient`, `xmltodict` | Runtime deps used by the collection's `netconf`/`cliconf` plugins (via `ansible.netcommon`). Installed by `release.yml` before `ansible-galaxy collection build`. |
-| `requirements-test.txt` | `black`, `flake8`, `mock`, `pexpect`, `pytest-xdist`, `pytest-ansible`, `yamllint`, `coverage`, `tox` | Development/CI only. None of this is shipped in the Galaxy artifact. |
+| `requirements-test.txt` | `black>=24.3.0`, `flake8>=7.0.0`, `mock>=5.1.0`, `pexpect>=4.9.0`, `pytest-xdist>=3.5.0`, `pytest-ansible>=24.0.0`, `yamllint>=1.35.0`, `coverage>=7.4.0`, `tox>=4.14.0` (no explicit `pytest` entry) | Development/CI only. None of this is shipped in the Galaxy artifact. |
 | `galaxy.yml` | `dependencies: ansible.netcommon: ">=6.0.0"` | Only collection dependency. Current Galaxy release is 8.7.1 (pulls `ansible.utils` 6.1.1). |
 | `tox.ini` | `linters` env = `black -l79 --check`, `flake8`, `yamllint -s .`; deps from both requirement files | No version pins beyond the requirement files. |
 | `.pre-commit-config.yaml` | `pre-commit-hooks v4.6.0`, `black 24.4.2`, `yamllint v1.35.1`, `ansible-lint v24.5.0` | All four `rev:` values are immutable tags — nothing floats. |
@@ -81,7 +81,7 @@ Also found while auditing the floors: `pytest-ansible>=24.0.0` refers to a relea
 | `requirements-test.txt` | `pytest-ansible>=24.0.0` → `pytest-ansible>=24.8.0` | 24.0.0 never existed. 24.8.0 is the first release whose metadata is `pytest>=6` (24.1.0 caps `pytest<8`, which would conflict with the new pytest floor). Current resolution (26.9.0) unchanged. |
 | `tests/integration/live/playbook.yml` | re-indent one comment | Makes `yamllint -s .` (part of `tox -e linters`) pass; no YAML semantics changed. |
 | `changelogs/fragments/supply-chain.yml` | `security_fixes` + `trivial` fragment | antsibull-changelog format used by this repo. |
-| `security/DEPENDENCY-AUDIT.md`, `security/sbom.cyclonedx.json` | this report and the SBOM | Documentation only. |
+| `security/DEPENDENCY-AUDIT.md`, `security/sbom.cyclonedx.json`, `security/sbom-runtime.cyclonedx.json` | this report and the SBOMs | Documentation only. |
 
 `.pre-commit-config.yaml` was **not** changed: every `rev:` is already an immutable tag. Bumping `psf/black` there to 26.x was evaluated and rejected — black 26 at `--line-length=160` would reformat 70 files (10 with the current 24.4.2), which is out of scope and would collide with in-flight work. The two black advisories are not reachable through the pre-commit hook (§2.2).
 
@@ -154,7 +154,8 @@ Commands run in the fresh venv (`~/venv-saos`, Python 3.12.13) at the repository
 | `flake8` | 9 × F401 (pre-existing) | 9 × F401 (unchanged, out of scope) |
 | `black -l79 --check .` | 96 files would be reformatted (pre-existing; same with black 24.4.2) | unchanged |
 | `tox -e linters` | FAIL (black step) | FAIL (black step, identical) |
-| `pip-audit ... --format cyclonedx-json` | — | `security/sbom.cyclonedx.json`, CycloneDX 1.4, 54 components |
+| `pip-audit -r requirements.txt -r requirements-test.txt --format cyclonedx-json` | — | `security/sbom.cyclonedx.json`, CycloneDX 1.4, 54 components (dev/CI environment) |
+| `pip-audit -r requirements.txt --format cyclonedx-json` | — | `security/sbom-runtime.cyclonedx.json`, CycloneDX 1.4, 15 components (release-job environment) |
 
 ## 7. Suggested follow-ups (not in this PR)
 
