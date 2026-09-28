@@ -1,9 +1,10 @@
-black>=24.3.0
+black>=26.3.1
 flake8>=7.0.0
 mock>=5.1.0
 pexpect>=4.9.0
+pytest>=9.0.3
 pytest-xdist>=3.5.0
-pytest-ansible>=24.0.0
+pytest-ansible>=24.8.0
 yamllint>=1.35.0
 coverage>=7.4.0
 tox>=4.14.0
