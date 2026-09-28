@@ -9,7 +9,6 @@ which required *leading and trailing* spaces around ``show`` and therefore
 dropped every realistic show command. This test pins the behaviour to a
 word-boundary match.
 """
-
 from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
@@ -24,14 +23,14 @@ from ansible_collections.ciena.saos10.plugins.modules import saos10_command
 @pytest.mark.parametrize(
     "command,kept",
     [
-        ("software show", True),  # SAOS "<subject> show" form
-        ("show version", True),  # SAOS "show <subject>" form
-        ("show", True),  # bare show
-        ("show foo bar", True),  # show with arguments
-        ("config", False),  # config-mode command
-        ("shutdown", False),  # not a show
-        ("software-show", False),  # identifier, not a show
-        ("showme", False),  # prefix collision
+        ("software show", True),     # SAOS "<subject> show" form
+        ("show version", True),      # SAOS "show <subject>" form
+        ("show", True),              # bare show
+        ("show foo bar", True),      # show with arguments
+        ("config", False),           # config-mode command
+        ("shutdown", False),         # not a show
+        ("software-show", False),    # identifier, not a show
+        ("showme", False),           # prefix collision
     ],
 )
 def test_check_mode_only_keeps_show_commands(command, kept):
