@@ -1,0 +1,88 @@
+---
+# Device-free demonstration of the offline states of the SAOS 10 resource
+# modules.  ``rendered`` turns ``config`` into the NETCONF XML that ``merged``
+# would push; ``parsed`` turns previously captured NETCONF XML back into the
+# ``config`` structure.  Neither state opens a connection, so this runs on
+# localhost:
+#
+#   ansible-playbook tests/static/offline-states.yml
+- name: SAOS 10 offline states (rendered / parsed)
+  hosts: localhost
+  connection: local
+  gather_facts: false
+  vars:
+    fds_running_config: |
+      <data xmlns="urn:ietf:params:xml:ns:netconf:base:1.0">
+        <fds xmlns="urn:ciena:params:xml:ns:yang:ciena-pn:ciena-mef-fd">
+          <fd>
+            <name>foo</name>
+            <mode>vpls</mode>
+            <initiate-l2-transform>
+              <vlan-stack>
+                <tag>1</tag>
+                <push-tpid>tpid-8100</push-tpid>
+                <push-vid>202</push-vid>
+              </vlan-stack>
+            </initiate-l2-transform>
+          </fd>
+        </fds>
+      </data>
+  tasks:
+    - name: Render the NETCONF XML for a forwarding domain
+      ciena.saos10.saos10_fds:  # noqa: fqcn[canonical] (action plugin redirect in meta/runtime.yml)
+        config:
+          - name: foo
+            mode: vpls
+            initiate_l2_transform:
+              vlan_stack:
+                - tag: 1
+                  push_tpid: tpid-8100
+                  push_vid: 202
+        state: rendered
+      register: fds_rendered
+
+    - name: Render the NETCONF XML for a classifier
+      ciena.saos10.saos10_classifiers:  # noqa: fqcn[canonical] (action plugin redirect in meta/runtime.yml)
+        config:
+          - name: foo-100
+            filter_entry:
+              - filter_parameter: vtag-stack
+                vtags:
+                  - tag: 1
+                    vlan_id: 100
+        state: rendered
+      register: classifiers_rendered
+
+    - name: Render the NETCONF XML for a flow point
+      ciena.saos10.saos10_fps:  # noqa: fqcn[canonical] (action plugin redirect in meta/runtime.yml)
+        config:
+          - name: foo
+            fd_name: foo
+            logical_port: "1"
+            mtu_size: 1522
+        state: rendered
+      register: fps_rendered
+
+    - name: Show the rendered XML
+      ansible.builtin.debug:
+        msg:
+          - "{{ fds_rendered.rendered }}"
+          - "{{ classifiers_rendered.rendered }}"
+          - "{{ fps_rendered.rendered }}"
+
+    - name: Parse NETCONF XML captured earlier from a device
+      ciena.saos10.saos10_fds:  # noqa: fqcn[canonical] (action plugin redirect in meta/runtime.yml)
+        running_config: "{{ fds_running_config }}"
+        state: parsed
+      register: fds_parsed
+
+    - name: Show the parsed facts
+      ansible.builtin.debug:
+        var: fds_parsed.parsed
+
+    - name: Parsed facts round-trip to the same structure as config
+      ansible.builtin.assert:
+        that:
+          - fds_parsed.parsed | length == 1
+          - fds_parsed.parsed[0].name == 'foo'
+          - fds_parsed.parsed[0].initiate_l2_transform.vlan_stack[0].push_vid == 202

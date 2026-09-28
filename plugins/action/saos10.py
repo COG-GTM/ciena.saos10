@@ -37,7 +37,11 @@ class ActionModule(ActionNetworkModule):
         persistent_connection = self._play_context.connection.split(".")[-1]
         warnings = []
 
-        if persistent_connection not in ("netconf", "network_cli"):
+        offline_state = self._task.args.get("state") in ("rendered", "parsed")
+        if persistent_connection == "local" and offline_state:
+            # rendered/parsed never talk to the device, so they may run on the controller
+            pass
+        elif persistent_connection not in ("netconf", "network_cli"):
             return {
                 "failed": True,
                 "msg": "Connection type %s is not valid for this module" % self._play_context.connection,

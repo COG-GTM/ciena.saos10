@@ -9,8 +9,8 @@ It is in this file the configuration is collected from the device
 for a given resource, parsed, and the facts tree is populated
 based on the configuration.
 """
-from __future__ import absolute_import, division, print_function
 
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
@@ -70,7 +70,7 @@ class ClassifiersFacts(object):
         if not HAS_LXML:
             self._module.fail_json(msg="lxml is not installed.")
 
-        if not data:
+        if data is None:
             config_filter = """
                 <classifiers xmlns="urn:ciena:params:xml:ns:yang:ciena-pn::ciena-mef-classifier">
                 </classifiers>
@@ -80,7 +80,7 @@ class ClassifiersFacts(object):
         stripped = remove_namespaces(xml_to_string(data))
         data = fromstring(to_bytes(stripped, errors="surrogate_then_replace"))
 
-        resources = data.xpath("//classifiers/classifiers")
+        resources = data.xpath("//classifiers/classifier")
         objs = []
         for resource in resources:
             if resource:
@@ -103,13 +103,34 @@ class ClassifiersFacts(object):
         return result[0].text if result else None
 
     def recursive_config_fill(self, config, conf, spec, xml_base_path=""):
-        for key, unused in spec.items():
+        """Fill ``config`` from ``conf`` following the argument spec.
+
+        Scalars are read with an xpath relative to ``conf``; ``dict``
+        options recurse into their ``options``; ``list`` options whose
+        elements are ``dict`` produce one entry per matching child element.
+        """
+        for key, option in spec.items():
             modified_key = key.replace("_", "-")
             new_base_path = f"{xml_base_path}/{modified_key}" if xml_base_path else modified_key
+            option_type = option.get("type")
+            sub_options = option.get("options")
 
-            if isinstance(spec[key], dict):
+            if option_type == "dict" and sub_options:
                 config[key] = {}
-                self.recursive_config_fill(config[key], conf, spec[key], new_base_path)
+                self.recursive_config_fill(config[key], conf, sub_options, new_base_path)
+            elif option_type == "list" and option.get("elements") == "dict" and sub_options:
+                items = []
+                for element in conf.xpath(new_base_path):
+                    item = {}
+                    self.recursive_config_fill(item, element, sub_options)
+                    if item:
+                        items.append(item)
+                if items:
+                    config[key] = items
+            elif option_type == "list":
+                values = [element.text for element in conf.xpath(new_base_path) if element.text is not None]
+                if values:
+                    config[key] = values
             else:
                 extracted_value = self.get_xml_value(conf, new_base_path)
                 if extracted_value is not None:
@@ -128,5 +149,5 @@ class ClassifiersFacts(object):
         if isinstance(conf, str):
             conf = fromstring(conf)
         config = {}
-        self.recursive_config_fill(config, conf, spec)
+        self.recursive_config_fill(config, conf, self.argument_spec["config"]["options"])
         return utils.remove_empties(config)

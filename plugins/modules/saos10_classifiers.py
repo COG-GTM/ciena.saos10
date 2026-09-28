@@ -310,13 +310,31 @@ options:
         type: str
         required: true
     key: name
+  running_config:
+    description:
+    - This option is used only with state I(parsed).
+    - The value of this option should be the NETCONF XML for C(<classifiers>) as returned
+      by a C(<get>) or C(<get-config>) on the device (or the C(ansible_net_config)
+      fact). The module parses it into the same structure as C(config) and returns
+      it in the I(parsed) key without connecting to the device.
+    type: str
   state:
     description:
-    - The state of the configuration
+    - The state of the configuration after module completion.
+    - I(merged) and I(deleted) push changes to the device.
+    - I(gathered) reads the current classifiers configuration from the device and
+      returns it in the I(gathered) key without changing anything.
+    - I(rendered) converts C(config) into the NETCONF XML that I(merged) would
+      push and returns it in the I(rendered) key without connecting to the device.
+    - I(parsed) converts I(running_config) into structured facts and returns
+      them in the I(parsed) key without connecting to the device.
     type: str
     choices:
     - merged
     - deleted
+    - gathered
+    - rendered
+    - parsed
     default: merged
 
 """
@@ -345,6 +363,36 @@ EXAMPLES = """
       - name: untagged
       - name: foo-100
     state: deleted
+
+# Using gathered
+
+- name: Gather the classifier configuration from the device
+  ciena.saos10.saos10_classifiers:
+    state: gathered
+
+# Using rendered (no device connection is made)
+
+- name: Render the NETCONF XML that merged would push
+  ciena.saos10.saos10_classifiers:
+    config:
+      - name: untagged
+        filter_entry:
+          - filter_parameter: vtag-stack
+            untagged_exclude_priority_tagged: false
+      - name: foo-100
+        filter_entry:
+          - filter_parameter: vtag-stack
+            vtags:
+              - tag: 1
+                vlan_id: 100
+    state: rendered
+
+# Using parsed (no device connection is made)
+
+- name: Parse NETCONF XML previously fetched from a device
+  ciena.saos10.saos10_classifiers:
+    running_config: "{{ lookup('ansible.builtin.file', 'saos10_classifiers.xml') }}"
+    state: parsed
 """
 
 RETURN = """
@@ -367,6 +415,25 @@ xml:
   returned: always
   type: list
   sample: ['<system xmlns="http://openconfig.net/yang/system"><config><hostname>foo</hostname></config></system>']
+gathered:
+  description: Facts about the classifiers configuration on the device.
+  returned: when I(state) is C(gathered)
+  type: list
+  sample: >
+    The configuration returned will always be in the same format
+     of the parameters above.
+rendered:
+  description: The NETCONF XML that would be pushed for I(config).
+  returned: when I(state) is C(rendered)
+  type: str
+  sample: '<classifiers xmlns="..."><classifier><name>foo</name></classifier></classifiers>'
+parsed:
+  description: The I(running_config) parsed into the structure of I(config).
+  returned: when I(state) is C(parsed)
+  type: list
+  sample: >
+    The configuration returned will always be in the same format
+     of the parameters above.
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -384,7 +451,19 @@ def main():
 
     :returns: the result form module invocation
     """
-    module = AnsibleModule(argument_spec=ClassifiersArgs.argument_spec, supports_check_mode=True)
+    required_if = [
+        ("state", "merged", ("config",)),
+        ("state", "rendered", ("config",)),
+        ("state", "parsed", ("running_config",)),
+    ]
+    mutually_exclusive = [("config", "running_config")]
+
+    module = AnsibleModule(
+        argument_spec=ClassifiersArgs.argument_spec,
+        required_if=required_if,
+        mutually_exclusive=mutually_exclusive,
+        supports_check_mode=True,
+    )
 
     result = Classifiers(module).execute_module()
     module.exit_json(**result)

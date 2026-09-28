@@ -1,0 +1,1 @@
+<classifiers xmlns="urn:ciena:params:xml:ns:yang:ciena-pn::ciena-mef-classifier"><classifier><name>foo-100</name><filter-entry><filter-parameter>vtag-stack</filter-parameter><vtags><tag>1</tag><vlan-id>100</vlan-id></vtags></filter-entry></classifier></classifiers>

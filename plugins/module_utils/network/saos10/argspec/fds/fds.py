@@ -25,8 +25,8 @@
 """
 The arg spec for the saos10_fds module
 """
-from __future__ import absolute_import, division, print_function
 
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
@@ -94,5 +94,10 @@ class FdsArgs(object):  # pylint: disable=R0903
                 "vlan_id": {"type": "int"},
             },
         },
-        "state": {"type": "str", "default": "merged", "choices": ["merged", "deleted"]},
+        "running_config": {"type": "str"},
+        "state": {
+            "type": "str",
+            "default": "merged",
+            "choices": ["merged", "deleted", "gathered", "rendered", "parsed"],
+        },
     }  # pylint: disable=C0301

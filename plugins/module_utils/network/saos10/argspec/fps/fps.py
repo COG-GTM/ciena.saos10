@@ -25,8 +25,8 @@
 """
 The arg spec for the saos10_fps module
 """
-from __future__ import absolute_import, division, print_function
 
+from __future__ import absolute_import, division, print_function
 
 __metaclass__ = type
 
@@ -214,5 +214,10 @@ class FpsArgs(object):  # pylint: disable=R0903
                 "uni": {"type": "list", "elements": "str", "choices": ["null"]},
             },
         },
-        "state": {"type": "str", "default": "merged", "choices": ["merged", "deleted"]},
+        "running_config": {"type": "str"},
+        "state": {
+            "type": "str",
+            "default": "merged",
+            "choices": ["merged", "deleted", "gathered", "rendered", "parsed"],
+        },
     }  # pylint: disable=C0301
