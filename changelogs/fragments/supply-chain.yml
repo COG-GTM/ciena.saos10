@@ -1,0 +1,7 @@
+---
+security_fixes:
+  - requirements.txt - raise the ``ansible-core`` floor to ``>=2.16.19`` so the declared minimum no longer admits releases affected by CVE-2024-0690 (PYSEC-2024-36), PYSEC-2026-1121/1122/1123/1124 and PYSEC-2026-3458.
+  - requirements-test.txt - raise the ``black`` floor to ``>=26.3.1`` (PYSEC-2026-2120/2121) and add an explicit ``pytest>=9.0.3`` floor (PYSEC-2026-1845); development-only tooling, not shipped in the collection.
+trivial:
+  - requirements-test.txt - correct the ``pytest-ansible`` floor from the non-existent ``24.0.0`` release to ``24.8.0`` (first release compatible with the ``pytest>=9.0.3`` floor).
+  - Add ``security/DEPENDENCY-AUDIT.md`` and a CycloneDX SBOM (``security/sbom.cyclonedx.json``) produced with pip-audit.

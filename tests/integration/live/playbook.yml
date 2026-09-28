@@ -35,7 +35,7 @@
       ciena.saos10.saos10_command:
         commands:
           - config
-        # No 'exit' at the end - leaves prompt at host(config)#
+          # No 'exit' at the end - leaves prompt at host(config)#
       connection: network_cli
       tags: [bug-repro]
 
