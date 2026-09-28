@@ -321,7 +321,6 @@ def main():
     """
     required_if = [
         ("state", "merged", ("config",)),
-        ("state", "deleted", ("config",)),
         ("state", "rendered", ("config",)),
         ("state", "parsed", ("running_config",)),
     ]

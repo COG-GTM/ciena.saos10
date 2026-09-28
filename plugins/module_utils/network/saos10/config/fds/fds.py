@@ -16,7 +16,7 @@ from __future__ import absolute_import, division, print_function
 __metaclass__ = type
 
 try:
-    from lxml.etree import tostring as xml_to_string, Element, fromstring, XMLParser
+    from lxml.etree import tostring as xml_to_string, Element, fromstring, XMLParser, LXML_VERSION
 
     HAS_LXML = True
 except ImportError:
@@ -82,8 +82,15 @@ class Fds(ConfigBase):
 
         if self.state == "parsed":
             running_config = self._module.params["running_config"]
-            parser = XMLParser(resolve_entities=False, no_network=True) if HAS_LXML else None
-            data = fromstring(to_bytes(running_config, errors="surrogate_then_replace"), parser=parser)
+            parser = None
+            if HAS_LXML:
+                # substitute entities declared inline, never external ones
+                entities = "internal" if LXML_VERSION >= (5, 0) else False
+                parser = XMLParser(resolve_entities=entities, no_network=True)
+            try:
+                data = fromstring(to_bytes(running_config, errors="surrogate_then_replace"), parser=parser)
+            except Exception as e:
+                self._module.fail_json(msg="running_config is not valid XML: %s" % e)
             result["parsed"] = self.get_facts(data=data)
             return result
 

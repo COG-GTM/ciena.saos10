@@ -98,6 +98,19 @@ class TestSaos10Fds(TestSaos10Module):
         assert result["changed"] is False
         self.assert_no_edit_config()
 
+    def test_deleted_without_config_deletes_everything_gathered(self):
+        self.queue_replies("fds_running.xml", "fds_empty.xml")
+        result = self.execute_module({"state": "deleted"})
+        assert result["changed"] is True
+        deletes = re.findall(r'<fd operation="delete"><name>([^<]+)</name></fd>', normalize_xml(self.edit_config_payloads()[0]))
+        assert deletes == [item["name"] for item in FACTS]
+
+    def test_deleted_without_config_on_empty_device_is_noop(self):
+        self.queue_replies("fds_empty.xml", "fds_empty.xml")
+        result = self.execute_module({"state": "deleted"})
+        assert result["changed"] is False
+        self.assert_no_edit_config()
+
     # --- offline / read-only states -------------------------------------
 
     def test_rendered_equals_merged_xml(self):
@@ -116,6 +129,12 @@ class TestSaos10Fds(TestSaos10Module):
         bare = re.search(r"<fds\b.*</fds>", load_fixture("fds_running.xml"), re.S).group(0)
         result = self.execute_module({"running_config": bare, "state": "parsed"})
         assert result["parsed"] == FACTS
+        self.assert_offline()
+
+    def test_parsed_substitutes_internal_entities(self):
+        xml = ('<!DOCTYPE data [<!ENTITY label "foo">]>' '<data><fds xmlns="urn:x"><{}><name>&label;</name></{}></fds></data>').format(ENTRY, ENTRY)
+        result = self.execute_module({"running_config": xml, "state": "parsed"})
+        assert [item["name"] for item in result["parsed"]] == ["foo"]
         self.assert_offline()
 
     def test_parsed_does_not_resolve_external_entities(self):
