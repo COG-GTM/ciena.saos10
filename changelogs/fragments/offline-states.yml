@@ -1,6 +1,6 @@
 ---
 minor_changes:
-  - saos10_fps, saos10_fds, saos10_classifiers - add the ``gathered``, ``rendered`` and ``parsed`` states and the ``running_config`` option; ``rendered`` and ``parsed`` run without a device connection (https://github.com/COG-GTM/ciena.saos10/pull/10).
-  - saos10_fps, saos10_fds, saos10_classifiers - honour check mode (no ``edit_config`` is sent) and report ``changed: false`` when the device already matches ``config``.
+  - "saos10_fps, saos10_fds, saos10_classifiers - add the ``gathered``, ``rendered`` and ``parsed`` states and the ``running_config`` option; ``rendered`` and ``parsed`` run without a device connection."
+  - "saos10_fps, saos10_fds, saos10_classifiers - honour check mode (no ``edit_config`` is sent) and report ``changed=false`` when the device already matches ``config``."
 bugfixes:
-  - saos10_fps, saos10_fds, saos10_classifiers - facts were never collected because the parser looked for ``<fps>/<fds>/<classifiers>`` list entries under the wrong element name; ``before``/``after`` are now populated and nested list options (for example ``vlan_stack`` and ``filter_entry``) are parsed.
+  - "saos10_fps, saos10_fds, saos10_classifiers - facts were never collected because the parser looked for the list entries under the wrong element name; ``before``/``after`` are now populated and nested list options (for example ``vlan_stack`` and ``filter_entry``) are parsed."
